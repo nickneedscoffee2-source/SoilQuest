@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soil Quest - Grade 3 Science</title>
+    
+    <!-- Tailwind CSS for Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome for Game Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel to compile the React code in the browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        /* Custom animations for the battle system */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .animate-shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        
+        body { margin: 0; background-color: #1c1917; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- POKEMON-STYLE ENCOUNTER DATA ---
+        const encounters = [
+          {
+            id: "q1",
+            name: "MUD GOLEM",
+            icon: <i className="fa-solid fa-mountain text-amber-700 drop-shadow-lg" style={{fontSize: '110px'}}></i>,
+            intro: "Wild MUD GOLEM appeared!",
+            challenge: "What is soil ACTUALLY made of?",
+            choices: [
+              { text: "Minerals, humus, water, but NO air spaces.", correct: false, answerText: "Missing air" },
+              { text: "Minerals, living plants, water, and air.", correct: false, answerText: "Living plants instead of humus" },
+              { text: "Mix of tiny rocks, humus, water, & air spaces!", correct: true, answerText: "Rocks, humus, water, air" },
+              { text: "Just broken rocks and mud mixed together.", correct: false, answerText: "Too simple" }
+            ],
+            itemReward: "Magnifying Glass",
+            itemIcon: <i className="fa-solid fa-magnifying-glass text-blue-500" style={{fontSize: '24px'}}></i>
+          },
+          {
+            id: "q2",
+            name: "GIANT SQUIGGLE",
+            icon: <i className="fa-solid fa-bug text-pink-500 drop-shadow-lg" style={{fontSize: '110px'}}></i>,
+            intro: "Wild GIANT SQUIGGLE burrowed up!",
+            challenge: "What is the earthworm's very important job?",
+            choices: [
+              { text: "Eats living plant roots, creates castings, and makes tunnels.", correct: false, answerText: "Eats living roots" },
+              { text: "Eats dead leaves, creates rich poop, & makes tunnels!", correct: true, answerText: "Mixes soil & makes tunnels" },
+              { text: "Eats dead leaves, creates castings, but fills in tunnels to trap water.", correct: false, answerText: "Fills tunnels" },
+              { text: "Eats soil rocks, creates rich castings, and makes tunnels.", correct: false, answerText: "Eats rocks" }
+            ],
+            itemReward: "Golden Trowel",
+            itemIcon: <i className="fa-solid fa-hammer text-yellow-500" style={{fontSize: '24px'}}></i>
+          },
+          {
+            id: "q3",
+            name: "PUDDLE SLIME",
+            icon: <i className="fa-solid fa-water text-blue-400 drop-shadow-lg" style={{fontSize: '110px'}}></i>,
+            intro: "Wild PUDDLE SLIME sloshed in!",
+            challenge: "Which path lets rainwater drain the FASTEST?",
+            choices: [
+              { text: "Gritty Sand, because it has large particles and large air spaces.", correct: true, answerText: "Sand (Large spaces)" },
+              { text: "Gritty Sand, because it has tiny particles packed tightly together.", correct: false, answerText: "Sand (Wrong reason)" },
+              { text: "Soft Loam, because it is perfectly balanced and drains instantly.", correct: false, answerText: "Loam (Not fastest)" },
+              { text: "Sticky Clay, because water slips right off its smooth surface.", correct: false, answerText: "Clay (Wrong fact)" }
+            ],
+            itemReward: "Sand Boots",
+            itemIcon: <i className="fa-solid fa-briefcase text-orange-400" style={{fontSize: '24px'}}></i>
+          },
+          {
+            id: "q4",
+            name: "HUNGRY ROOT ENT",
+            icon: <i className="fa-solid fa-tree text-green-700 drop-shadow-lg" style={{fontSize: '110px'}}></i>,
+            intro: "Wild HUNGRY ROOT ENT attacked!",
+            challenge: "What soil is BEST for plants (holds water & nutrients well)?",
+            choices: [
+              { text: "Loam, because it is made entirely of humus and holds all water.", correct: false, answerText: "Loam (Wrong reason)" },
+              { text: "Sand, because it has a balanced mix of particles and drains perfectly.", correct: false, answerText: "Sand (Describing loam)" },
+              { text: "Clay, because it has a balanced mix of nutrients and never dries out.", correct: false, answerText: "Clay (Describing loam)" },
+              { text: "Loam, because it's a perfect mix of sand, silt, clay, & humus.", correct: true, answerText: "Loam (Perfect mix)" }
+            ],
+            itemReward: "Bag of Loam",
+            itemIcon: <i className="fa-solid fa-seedling text-green-600" style={{fontSize: '24px'}}></i>
+          },
+          {
+            id: "q5",
+            name: "EROSION PHANTOM",
+            icon: <i className="fa-solid fa-wind text-stone-300 drop-shadow-lg" style={{fontSize: '110px'}}></i>,
+            intro: "Wild EROSION PHANTOM howled!",
+            challenge: "How do we best stop bare soil from washing away naturally?",
+            choices: [
+              { text: "Plant trees & grass, because heavy leaves press the soil down.", correct: false, answerText: "Plant (Wrong reason)" },
+              { text: "Remove all plants, so the rain can wash over the soil smoothly.", correct: false, answerText: "Remove plants" },
+              { text: "Build a small wooden fence around the topsoil to catch it.", correct: false, answerText: "Build fence" },
+              { text: "Plant trees & grass! Roots hold soil together like a net.", correct: true, answerText: "Plant (Roots act as net)" }
+            ],
+            itemReward: "Root Net",
+            itemIcon: <i className="fa-solid fa-layer-group text-amber-600" style={{fontSize: '24px'}}></i>
+          },
+          {
+            id: "q6",
+            name: "BEDROCK KNIGHT",
+            icon: <i className="fa-solid fa-layer-group text-amber-800 drop-shadow-lg" style={{fontSize: '110px'}}></i>,
+            intro: "Wild BEDROCK KNIGHT blocks the way!",
+            challenge: "What is the middle, lighter, rocky layer of soil called?",
+            choices: [
+              { text: "Subsoil, which is darker in color, softer, and has more humus.", correct: false, answerText: "Subsoil (Wrong description)" },
+              { text: "Subsoil, which is lighter in color, harder, and has more rocks.", correct: true, answerText: "Subsoil (Correct description)" },
+              { text: "Bedrock, which is lighter in color, harder, and has more rocks.", correct: false, answerText: "Bedrock (Wrong name)" },
+              { text: "Topsoil, which is lighter in color, harder, and has more rocks.", correct: false, answerText: "Topsoil (Wrong name)" }
+            ],
+            itemReward: "Miner's Helmet",
+            itemIcon: <i className="fa-solid fa-hammer text-gray-400" style={{fontSize: '24px'}}></i>
+          },
+          {
+            id: "q7",
+            name: "RECYCLE SLIME",
+            icon: <i className="fa-solid fa-trash-can text-green-500 drop-shadow-lg" style={{fontSize: '110px'}}></i>,
+            intro: "Wild RECYCLE SLIME is eating trash!",
+            challenge: "What is it called when dead leaves turn into rich humus?",
+            choices: [
+              { text: "Composting, where living plants are melted down into rich humus.", correct: false, answerText: "Composting (Living/Melted)" },
+              { text: "Erosion, where decomposers break down dead plant matter into humus.", correct: false, answerText: "Erosion (Wrong name)" },
+              { text: "Composting, where decomposers break down dead plant matter into humus.", correct: true, answerText: "Composting (Correct)" },
+              { text: "Composting, where decomposers break down rocks and minerals into humus.", correct: false, answerText: "Composting (Rocks)" }
+            ],
+            itemReward: "Compost Bin",
+            itemIcon: <i className="fa-solid fa-tent text-green-800" style={{fontSize: '24px'}}></i>
+          },
+          {
+            id: "q8",
+            name: "DESERT SCORPION",
+            icon: <i className="fa-solid fa-mountain text-amber-400 drop-shadow-lg" style={{fontSize: '110px'}}></i>,
+            intro: "Wild DESERT SCORPION pinched!",
+            challenge: "Which words best describe sandy soil?",
+            choices: [
+              { text: "Gritty, has large particles, large air spaces, and forms puddles easily.", correct: false, answerText: "Gritty (Forms puddles)" },
+              { text: "Gritty, has tiny particles packed tightly, and water drains quickly.", correct: false, answerText: "Gritty (Tiny particles)" },
+              { text: "Sticky, has large particles, large air spaces, and water drains quickly.", correct: false, answerText: "Sticky" },
+              { text: "Gritty, has large particles, large air spaces, & water drains quickly.", correct: true, answerText: "Gritty (Drains quickly)" }
+            ],
+            itemReward: "Oasis Flask",
+            itemIcon: <i className="fa-solid fa-droplet text-blue-300" style={{fontSize: '24px'}}></i>
+          },
+          {
+            id: "q9",
+            name: "MICRO-SWARM",
+            icon: <i className="fa-solid fa-seedling text-purple-500 drop-shadow-lg" style={{fontSize: '110px'}}></i>,
+            intro: "Wild MICRO-SWARM surrounded you!",
+            challenge: "Which groups of living things make their home in the soil?",
+            choices: [
+              { text: "Millions of living things including bacteria, fungi, and small fish.", correct: false, answerText: "Small fish" },
+              { text: "Billions of non-living things like bacteria, fungi, and earthworms.", correct: false, answerText: "Non-living" },
+              { text: "Billions of living things including bacteria, fungi, ants, & earthworms.", correct: true, answerText: "Bugs/Bacteria (Correct)" },
+              { text: "Only a few living things like ants and earthworms, but no bacteria.", correct: false, answerText: "No bacteria" }
+            ],
+            itemReward: "Microscope",
+            itemIcon: <i className="fa-solid fa-microscope text-purple-400" style={{fontSize: '24px'}}></i>
+          },
+          {
+            id: "q10",
+            name: "TOXIC PHANTOM",
+            icon: <i className="fa-solid fa-shield-halved text-red-600 drop-shadow-lg" style={{fontSize: '110px'}}></i>,
+            intro: "Wild TOXIC PHANTOM descended!",
+            challenge: "How do harsh chemical pesticides affect the soil?",
+            choices: [
+              { text: "They accidentally harm or kill the harmful rocks and minerals.", correct: false, answerText: "Harm rocks" },
+              { text: "They only kill bad bugs and leave helpful worms perfectly safe.", correct: false, answerText: "Leaves helpful safe" },
+              { text: "They make helpful living things grow twice as large.", correct: false, answerText: "Grow large" },
+              { text: "They can accidentally harm or kill the helpful living things.", correct: true, answerText: "Kills helpful life" }
+            ],
+            itemReward: "Earth Badge",
+            itemIcon: <i className="fa-solid fa-shield text-yellow-400" style={{fontSize: '24px'}}></i>
+          }
+        ];
+
+        function App() {
+          // App State
+          const [gameState, setGameState] = useState('login');
+          const [studentName, setStudentName] = useState('');
+          
+          // Pokémon Battle State
+          const [encounterIndex, setEncounterIndex] = useState(0);
+          const [view, setView] = useState('intro'); // intro, main, fight, bag, dialog_result, dialog_item, map
+          const [dialogText, setDialogText] = useState('');
+          const [enemyHP, setEnemyHP] = useState(100);
+          const [playerHP, setPlayerHP] = useState(100);
+          const [bagItems, setBagItems] = useState([]);
+          
+          // Tracking & Scoring State
+          const [score, setScore] = useState(0);
+          const [exp, setExp] = useState(0);
+          const [streak, setStreak] = useState(0);
+          const [answers, setAnswers] = useState({});
+          const [lastResult, setLastResult] = useState(null);
+          
+          // Submission State
+          const [isSubmitting, setIsSubmitting] = useState(false);
+          const [submitSuccess, setSubmitSuccess] = useState(null);
+          
+          // Teacher Settings State
+          const [showSettings, setShowSettings] = useState(false);
+          const [sheetUrl, setSheetUrl] = useState('');
+
+          // Load saved teacher URL on mount
+          useEffect(() => {
+            const savedUrl = localStorage.getItem('soilGameSheetUrl');
+            if (savedUrl) setSheetUrl(savedUrl);
+          }, []);
+
+          const saveSettings = () => {
+            localStorage.setItem('soilGameSheetUrl', sheetUrl);
+            setShowSettings(false);
+            alert("Tracker URL saved locally! The game is ready to track data.");
+          };
+
+          const handleStart = (e) => {
+            e.preventDefault();
+            if (studentName.trim() === '') {
+              alert("Please enter your name, Trainer!");
+              return;
+            }
+            setGameState('playing');
+            setEncounterIndex(0);
+            setScore(0);
+            setExp(0);
+            setStreak(0);
+            setAnswers({});
+            setBagItems([]);
+            setSubmitSuccess(null);
+            startEncounter(0);
+          };
+
+          const startEncounter = (index) => {
+            setEnemyHP(100);
+            setView('intro');
+            setDialogText(encounters[index].intro);
+          };
+
+          const submitData = async (finalAnswers, finalScore, finalExp) => {
+            if (!sheetUrl) {
+              console.log("No sheet URL provided. Skipping data submission.");
+              return;
+            }
+
+            setIsSubmitting(true);
+            
+            const formatAnswer = (ans) => {
+              if (!ans) return 'No answer';
+              return `${ans.correct ? '✅' : '❌'} ${ans.text}`;
+            };
+
+            const payload = {
+              studentName: studentName,
+              score: `${finalExp} EXP (${finalScore}/10)`,
+              q1: formatAnswer(finalAnswers['q1']),
+              q2: formatAnswer(finalAnswers['q2']),
+              q3: formatAnswer(finalAnswers['q3']),
+              q4: formatAnswer(finalAnswers['q4']),
+              q5: formatAnswer(finalAnswers['q5']),
+              q6: formatAnswer(finalAnswers['q6']),
+              q7: formatAnswer(finalAnswers['q7']),
+              q8: formatAnswer(finalAnswers['q8']),
+              q9: formatAnswer(finalAnswers['q9']),
+              q10: formatAnswer(finalAnswers['q10'])
+            };
+
+            try {
+              await fetch(sheetUrl, {
+                method: 'POST',
+                mode: 'no-cors', 
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify(payload)
+              });
+              setSubmitSuccess(true);
+            } catch (error) {
+              console.error("Error submitting data:", error);
+              setSubmitSuccess(false);
+            } finally {
+              setIsSubmitting(false);
+            }
+          };
+
+          const handleChoice = (choice) => {
+            const currentEncounter = encounters[encounterIndex];
+            let newAnswers = { ...answers };
+            
+            newAnswers[currentEncounter.id] = { text: choice.answerText, correct: choice.correct };
+            
+            if (choice.correct) {
+              const pointsEarned = (encounterIndex + 1) * 10;
+              const newStreak = streak + 1;
+              let bonus = 0;
+              if (newStreak === 5 || newStreak === 10) {
+                bonus = 50;
+              }
+              
+              setExp(exp + pointsEarned + bonus);
+              setScore(score + 1);
+              setStreak(newStreak);
+              setLastResult('success');
+              setEnemyHP(0);
+              
+              let successMsg = `It's super effective! Wild ${currentEncounter.name} fainted! Gained ${pointsEarned} EXP!`;
+              if (bonus > 0) successMsg += ` (STREAK BONUS! +${bonus} EXP!)`;
+              setDialogText(successMsg);
+              
+            } else {
+              setLastResult('fail');
+              setStreak(0);
+              setPlayerHP(prev => Math.max(10, prev - 20));
+              setDialogText(`Attack missed! The answer was incorrect. Wild ${currentEncounter.name} fled!`);
+            }
+            
+            setAnswers(newAnswers);
+            setView('dialog_result');
+          };
+
+          const advanceDialog = () => {
+            if (view === 'intro') {
+              setView('main');
+              setDialogText('');
+            } else if (view === 'dialog_result') {
+              if (lastResult === 'success') {
+                const item = encounters[encounterIndex].itemReward;
+                setBagItems([...bagItems, { name: item, icon: encounters[encounterIndex].itemIcon }]);
+                setDialogText(`${studentName} found the [${item}]!`);
+                setView('dialog_item');
+              } else {
+                handleNextEncounter();
+              }
+            } else if (view === 'dialog_item') {
+              handleNextEncounter();
+            }
+          };
+
+          const handleNextEncounter = () => {
+            if (encounterIndex + 1 < encounters.length) {
+              setView('map');
+            } else {
+              setGameState('end');
+              submitData(answers, score, exp);
+            }
+          };
+
+          const continueFromMap = () => {
+            setEncounterIndex(encounterIndex + 1);
+            startEncounter(encounterIndex + 1);
+          };
+
+          const resetGame = () => {
+            setStudentName('');
+            setGameState('login');
+            setEncounterIndex(0);
+            setScore(0);
+            setExp(0);
+            setStreak(0);
+            setAnswers({});
+            setBagItems([]);
+            setPlayerHP(100);
+          };
+
+          // --- UI RENDERING ---
+          if (gameState === 'login') {
+            return (
+              <div className="min-h-screen text-stone-100 font-mono flex flex-col items-center justify-center p-4 uppercase">
+                <div className="bg-stone-800 border-4 border-stone-500 p-8 max-w-lg w-full shadow-2xl rounded-lg">
+                  <div className="text-center mb-8">
+                    <i className="fa-solid fa-seedling mx-auto mb-4 text-green-400 drop-shadow-[0_0_10px_rgba(74,222,128,0.8)]" style={{fontSize: '64px'}}></i>
+                    <h1 className="text-3xl md:text-4xl font-black mb-2 tracking-widest text-white drop-shadow-md">SOILMON</h1>
+                    <p className="text-amber-300 text-sm tracking-widest">A Grade 3 Science Battle</p>
+                  </div>
+                  
+                  <form onSubmit={handleStart} className="space-y-6">
+                    <div>
+                      <label className="block text-sm mb-2 text-stone-300">Enter Trainer Name:</label>
+                      <input 
+                        type="text" 
+                        value={studentName}
+                        onChange={(e) => setStudentName(e.target.value)}
+                        className="w-full px-4 py-3 bg-stone-100 border-4 border-stone-400 focus:border-blue-500 focus:outline-none text-stone-900 text-xl uppercase font-bold"
+                        placeholder="NAME..."
+                        required
+                      />
+                    </div>
+                    <button 
+                      type="submit"
+                      className="w-full bg-blue-600 hover:bg-blue-500 text-white border-4 border-blue-800 hover:border-blue-700 font-bold py-4 px-6 text-xl tracking-widest shadow-[0_4px_0_rgb(30,58,138)] hover:shadow-none hover:translate-y-1 transition-all"
+                    >
+                      PRESS START
+                    </button>
+                  </form>
+                </div>
+
+                <div className="mt-8 max-w-lg w-full">
+                  <button 
+                    onClick={() => setShowSettings(!showSettings)}
+                    className="flex items-center justify-center text-stone-600 hover:text-stone-300 text-xs w-full mx-auto transition-colors"
+                  >
+                    <i className="fa-solid fa-gear mr-1"></i> [ TEACHER SETTINGS ]
+                  </button>
+                  
+                  {showSettings && (
+                    <div className="mt-4 p-4 border-2 border-stone-700 bg-stone-950 text-xs rounded">
+                      <label className="block text-stone-400 mb-2">GOOGLE APPS SCRIPT URL:</label>
+                      <input 
+                        type="text" 
+                        value={sheetUrl}
+                        onChange={(e) => setSheetUrl(e.target.value)}
+                        className="w-full px-2 py-2 bg-stone-900 border border-stone-600 text-stone-300 mb-4 outline-none focus:border-blue-500 lowercase font-sans"
+                        placeholder="https://script.google.com/..."
+                      />
+                      <button 
+                        onClick={saveSettings}
+                        className="bg-stone-700 hover:bg-stone-600 text-white py-2 px-4 rounded flex items-center font-bold"
+                      >
+                        <i className="fa-solid fa-floppy-disk mr-2"></i> SAVE TRACKER URL
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          if (gameState === 'playing') {
+            const encounter = encounters[encounterIndex];
+
+            return (
+              <div className="min-h-screen flex flex-col font-mono text-stone-800 p-2 sm:p-4 uppercase max-w-3xl mx-auto w-full">
+                <div className="flex-grow flex flex-col bg-stone-200 border-8 border-stone-400 rounded-lg overflow-hidden shadow-[0_0_20px_rgba(0,0,0,0.5)]">
+                  
+                  {/* TOP STATUS BAR */}
+                  <div className="bg-stone-800 text-white flex justify-between p-2 text-xs sm:text-sm font-bold border-b-4 border-stone-400 z-30">
+                     <div className="flex items-center text-amber-400">
+                        <i className="fa-solid fa-star mr-1"></i> EXP: {exp}
+                     </div>
+                     <div className={`flex items-center ${streak >= 3 ? 'text-orange-500 animate-pulse' : 'text-stone-300'}`}>
+                        <i className="fa-solid fa-fire mr-1"></i> STREAK: {streak}
+                     </div>
+                  </div>
+
+                  {/* MAP VIEW */}
+                  {view === 'map' ? (
+                    <div className="flex-grow flex flex-col bg-[#8b9bb4] relative p-4 z-20">
+                      <div className="text-center bg-stone-800 text-white py-2 border-4 border-stone-400 rounded shadow-md mb-2">
+                         <h2 className="font-bold tracking-widest text-sm sm:text-base flex justify-center items-center">
+                            <i className="fa-solid fa-map mr-2"></i> PATH TO MASTERY
+                         </h2>
+                      </div>
+                      
+                      <div className="flex-grow flex flex-col-reverse justify-between relative px-6 overflow-hidden py-4">
+                        <div className="absolute left-[39px] w-2 h-[95%] bg-stone-600 top-1/2 -translate-y-1/2 z-0 border-x border-stone-700"></div>
+
+                        {encounters.map((enc, i) => {
+                           const status = i < encounterIndex + 1 ? "completed" : i === encounterIndex + 1 ? "current" : "locked";
+                           return (
+                             <div key={i} className="flex items-center z-10 relative">
+                               <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold text-xs shadow-[0_4px_0_rgba(0,0,0,0.3)]
+                                 ${status === "completed" ? "bg-green-500 border-green-200 text-white" :
+                                   status === "current" ? "bg-yellow-400 border-yellow-100 text-stone-900 animate-pulse" :
+                                   "bg-stone-500 border-stone-400 text-stone-700"}`}>
+                                 {status === "completed" ? "✓" : i + 1}
+                               </div>
+                               
+                               {status === "current" && (
+                                 <div className="absolute left-10 flex items-center text-yellow-300 drop-shadow-md font-bold text-[10px] sm:text-xs bg-stone-900/90 px-2 py-1 rounded border border-stone-600 animate-bounce">
+                                   <i className="fa-solid fa-bolt mr-2 text-blue-400"></i> NEXT: {enc.name}
+                                 </div>
+                               )}
+                             </div>
+                           )
+                        })}
+                      </div>
+                      
+                      <button onClick={continueFromMap} className="mt-2 bg-blue-600 text-white font-bold py-3 border-4 border-blue-400 rounded shadow-[0_4px_0_rgb(30,58,138)] hover:shadow-none hover:translate-y-1 active:bg-blue-700">
+                        CHALLENGE NEXT ENCOUNTER ▶
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      {/* BATTLE ARENA */}
+                      <div className="flex-grow bg-[#d1e8d5] relative overflow-hidden flex flex-col justify-between p-4">
+                        <div className="absolute inset-0 pointer-events-none opacity-10 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.2)_50%)] bg-[length:100%_4px] z-20"></div>
+                        
+                        <div className="flex justify-between w-full z-10">
+                          <div className="bg-white border-4 border-stone-700 rounded-bl-2xl p-2 sm:p-3 w-48 sm:w-64 shadow-md ml-auto relative">
+                            <div className="flex justify-between font-bold text-sm sm:text-base">
+                              <span>{encounter.name}</span>
+                              <span>Lv{encounterIndex + 1}</span>
+                            </div>
+                            <div className="mt-2 bg-stone-700 h-3 sm:h-4 w-full rounded-full border-2 border-stone-800 overflow-hidden relative flex">
+                              <div className="bg-yellow-400 text-[8px] font-bold px-1 text-stone-800 flex items-center">HP</div>
+                              <div className="flex-grow bg-stone-300">
+                                <div className="bg-green-500 h-full transition-all duration-700 ease-out" style={{width: `${enemyHP}%`}}></div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className={`absolute top-20 right-8 sm:right-16 z-0 transition-all duration-500 ${enemyHP === 0 ? 'opacity-0 translate-y-10' : 'opacity-100'} ${view === 'intro' ? '-translate-x-20 opacity-0' : 'translate-x-0'}`}>
+                           <div className="animate-bounce">
+                             {encounter.icon}
+                           </div>
+                        </div>
+
+                        <div className="flex justify-between w-full mt-auto z-10 items-end">
+                          <div className="w-24 h-24 sm:w-32 sm:h-32 mb-4 ml-4 flex items-end">
+                             <div className="w-full h-1/2 bg-green-700/20 rounded-[100%] absolute bottom-2 filter blur-sm"></div>
+                             {/* Player Sword Inline SVG */}
+                             <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-700 relative z-10 transform -rotate-45 drop-shadow-lg"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"></path><path d="M13 19l6-6"></path><path d="M16 16l4 4"></path><path d="M19 21l2-2"></path></svg>
+                          </div>
+
+                          <div className="bg-white border-4 border-stone-700 rounded-tl-2xl p-2 sm:p-3 w-56 sm:w-72 shadow-md">
+                            <div className="flex justify-between font-bold text-sm sm:text-base">
+                              <span>{studentName}</span>
+                              <span>Lv3</span>
+                            </div>
+                            <div className="mt-2 bg-stone-700 h-3 sm:h-4 w-full rounded-full border-2 border-stone-800 overflow-hidden relative flex">
+                              <div className="bg-yellow-400 text-[8px] font-bold px-1 text-stone-800 flex items-center">HP</div>
+                              <div className="flex-grow bg-stone-300">
+                                <div className={`h-full transition-all duration-500 ${playerHP > 50 ? 'bg-green-500' : playerHP > 20 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{width: `${playerHP}%`}}></div>
+                              </div>
+                            </div>
+                            <div className="text-right text-xs mt-1 font-bold">{playerHP}/ 100</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* DIALOG & MENU */}
+                      <div className="h-48 sm:h-56 bg-white border-t-8 border-stone-700 p-2 sm:p-4">
+                        <div className="h-full border-4 border-stone-300 rounded p-2 sm:p-4 relative">
+                          
+                          {(view === 'intro' || view === 'dialog_result' || view === 'dialog_item') && (
+                            <div className="h-full flex flex-col justify-between cursor-pointer" onClick={advanceDialog}>
+                              <p className="text-base sm:text-xl font-bold leading-relaxed">{dialogText}</p>
+                              <div className="text-right animate-pulse text-xl">▼</div>
+                            </div>
+                          )}
+
+                          {view === 'main' && (
+                            <div className="flex h-full">
+                              <div className="w-1/2 flex items-center px-4">
+                                <p className="text-base sm:text-xl font-bold">What will<br/>{studentName} do?</p>
+                              </div>
+                              <div className="w-1/2 border-l-4 border-stone-300 grid grid-cols-1 gap-2 pl-4 py-2">
+                                <button onClick={() => setView('fight')} className="bg-stone-100 hover:bg-stone-200 border-2 border-stone-800 rounded font-bold text-lg flex justify-center items-center group">
+                                  <span className="invisible group-hover:visible mr-2 text-blue-600">▶</span> ATTACK
+                                </button>
+                                <button onClick={() => setView('bag')} className="bg-stone-100 hover:bg-stone-200 border-2 border-stone-800 rounded font-bold text-lg flex justify-center items-center group">
+                                  <span className="invisible group-hover:visible mr-2 text-green-600">▶</span> BAG ({bagItems.length})
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {view === 'fight' && (
+                            <div className="h-full flex flex-col">
+                              <p className="text-xs sm:text-sm font-bold text-blue-800 mb-2 bg-blue-100 p-2 rounded">{encounter.challenge}</p>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-auto h-full overflow-y-auto pr-1">
+                                {encounter.choices.map((choice, index) => (
+                                  <button 
+                                    key={index}
+                                    onClick={() => handleChoice(choice)}
+                                    className="text-left bg-stone-50 hover:bg-stone-200 border-2 border-stone-400 hover:border-stone-800 p-2 text-[10px] sm:text-xs md:text-[13px] font-bold flex items-center group rounded"
+                                  >
+                                    <span className="invisible group-hover:visible mr-1 sm:mr-2 text-red-500">▶</span>
+                                    <span className="leading-tight">{choice.text}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {view === 'bag' && (
+                            <div className="h-full flex flex-col">
+                              <div className="flex justify-between items-center mb-2">
+                                <h3 className="font-bold text-green-700 flex items-center"><i className="fa-solid fa-briefcase mr-2"></i> ITEM BAG</h3>
+                                <button onClick={() => setView('main')} className="text-xs bg-stone-800 text-white px-3 py-1 rounded hover:bg-stone-600 font-bold">CANCEL</button>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 overflow-y-auto h-full p-1">
+                                {bagItems.length === 0 && <p className="text-sm text-stone-500 col-span-2">Bag is empty...</p>}
+                                {bagItems.map((item, idx) => (
+                                  <div key={idx} className="bg-stone-100 border border-stone-300 p-2 flex items-center text-xs font-bold rounded">
+                                    <span className="mr-2">{item.icon}</span> {item.name}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          if (gameState === 'end') {
+            return (
+              <div className="min-h-screen text-stone-100 font-mono flex items-center justify-center p-4 uppercase">
+                <div className="bg-stone-800 border-4 border-stone-500 p-8 max-w-xl w-full shadow-2xl rounded-lg text-center">
+                  
+                  <h1 className="text-3xl font-black text-amber-400 mb-6 tracking-widest drop-shadow-md">QUEST COMPLETE!</h1>
+                  
+                  <p className="text-lg mb-6 leading-relaxed">
+                    TRAINER {studentName} defeated the soil monsters and collected {bagItems.length} special items!
+                  </p>
+                  
+                  <div className="bg-stone-900 border-4 border-stone-700 p-4 mb-6 rounded-lg">
+                     <h3 className="text-sm text-stone-400 mb-4">ITEMS COLLECTED:</h3>
+                     <div className="flex flex-wrap justify-center gap-3">
+                        {bagItems.length === 0 && <span className="text-stone-600">None</span>}
+                        {bagItems.map((item, idx) => (
+                          <div key={idx} className="bg-stone-800 border-2 border-stone-600 p-2 rounded-full shadow-inner tooltip" title={item.name}>
+                            {item.icon}
+                          </div>
+                        ))}
+                     </div>
+                  </div>
+
+                  <div className="border-t-2 border-b-2 border-stone-600 py-4 mb-6">
+                    <h3 className="text-sm text-stone-400 mb-1">FINAL EXP GAINED</h3>
+                    <div className="text-5xl font-black text-yellow-400 flex items-center justify-center">
+                      <i className="fa-solid fa-star mr-2"></i> {exp}
+                    </div>
+                    
+                    <p className="text-sm mt-3 font-bold text-green-400">
+                      {score === 10 ? "CHAMPION LEVEL! PERFECT 10/10!" :
+                       score >= 7 ? `GREAT WORK! ${score}/10 CORRECT.` :
+                       `GOOD EFFORT. ${score}/10 CORRECT. KEEP TRAINING!`}
+                    </p>
+                  </div>
+
+                  {sheetUrl && (
+                    <div className="mb-6 text-xs font-bold flex items-center justify-center bg-stone-950 py-2 rounded border border-stone-700">
+                      {isSubmitting ? (
+                         <span className="text-amber-400 animate-pulse">SAVING DATA TO PROFESSOR'S LAB...</span>
+                      ) : submitSuccess ? (
+                         <span className="text-green-400 flex items-center"><i className="fa-solid fa-circle-check mr-1"></i> DATA SAVED.</span>
+                      ) : submitSuccess === false ? (
+                         <span className="text-red-500 flex items-center"><i className="fa-solid fa-circle-xmark mr-1"></i> TRANSMISSION FAILED.</span>
+                      ) : null}
+                    </div>
+                  )}
+
+                  <button 
+                    onClick={resetGame}
+                    className="w-full bg-blue-600 hover:bg-blue-500 text-white border-4 border-blue-800 hover:border-blue-700 font-bold py-4 px-6 text-xl tracking-widest shadow-[0_4px_0_rgb(30,58,138)] hover:shadow-none hover:translate-y-1 transition-all"
+                  >
+                    PLAY AGAIN
+                  </button>
+                </div>
+              </div>
+            );
+          }
+
+          return null;
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
